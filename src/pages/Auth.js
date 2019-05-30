@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import AuthContext from '../context/auth-context'
 
 import './Auth.css'
 
@@ -6,6 +7,8 @@ class AuthPage extends Component {
   state = {
     isLogin: true
   }
+  static contextType = AuthContext
+
   constructor(props){
     super(props)
     this.namaEl = React.createRef()
@@ -13,6 +16,7 @@ class AuthPage extends Component {
     this.emailEl = React.createRef()
     this.passwordEl = React.createRef()
   }
+
 
   switchModeHandler = event => {
     this.setState(prevState => {
@@ -25,15 +29,15 @@ class AuthPage extends Component {
   Foo = () => {
     return (
       <>
-      <div className="form-control">
-      <label htmlFor="nama">Nama</label>
-      <input type="text" id="nama" ref={this.namaEl}></input>
-    </div>
-    <div className="form-control">
-      <label htmlFor="email">Email</label>
-      <input type="email" id="email" ref={this.emailEl}></input>
-    </div>
-    </>
+        <div className="form-control">
+          <label htmlFor="nama">Nama</label>
+          <input type="text" id="nama" ref={this.namaEl}></input>
+        </div>
+        <div className="form-control">
+          <label htmlFor="email">Email</label>
+          <input type="email" id="email" ref={this.emailEl}></input>
+        </div>
+      </>
     )
   }
 
@@ -97,16 +101,22 @@ class AuthPage extends Component {
     })
     .then(res => {
       if(res.status !== 200 && res.status !== 201){
-        return new Error('Failed!')
+        throw new Error("Authentication Failed!")
       }
-
       return res.json()
     })
     .then(resBody => {
-      console.log(resBody)
+      if(resBody.data.login.token){
+        this.context.login(
+          resBody.data.login.token, 
+          resBody.data.login.userId,
+          resBody.data.login.tokenExp
+        )
+      }
+
     })
     .catch(err => {
-      throw err
+      console.error(err)
     })
   }
 
