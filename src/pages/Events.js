@@ -2,12 +2,13 @@ import React, { Component } from "react";
 
 import Modal from "../components/Modal/Modal";
 import Backdrop from "../components/Backdrop/Backdrop";
-import AuthContext from '../context/auth-context'
+import AuthContext from "../context/auth-context";
 import "./styles/Events.css";
 
 class EventsPage extends Component {
   state = {
-    creating: false
+    creating: false,
+    events: []
   };
 
   constructor(props) {
@@ -18,7 +19,11 @@ class EventsPage extends Component {
     this.dateEl = React.createRef();
   }
 
-  static contextType = AuthContext
+  static contextType = AuthContext;
+
+  componentDidMount() {
+    this.fetchEvent();
+  }
 
   createEvent = () => {
     this.setState({ creating: true });
@@ -41,7 +46,7 @@ class EventsPage extends Component {
       harga <= 0 ||
       date.trim().length === 0
     ) {
-      console.error('Your input is not valid')
+      console.error("Your input is not valid");
       return;
     }
 
@@ -56,10 +61,10 @@ class EventsPage extends Component {
     const requestBody = {
       query: `mutation {
         createEvent(EventInput: {
-          judul: ${judul},
-          deskripsi: ${deskripsi},
+          judul: "${judul}",
+          deskripsi: "${deskripsi}",
           harga: ${harga},
-          date: ${date}
+          date: "${date}"
         }) {
           _id
           judul
@@ -74,31 +79,74 @@ class EventsPage extends Component {
       }`
     };
 
-    const token = this.context.token
+    const token = this.context.token;
 
-    fetch('http://localhost:5000/graphql', {
-      method: 'POST',
+    fetch("http://localhost:5000/graphql", {
+      method: "POST",
       body: JSON.stringify(requestBody),
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
       }
     })
-    .then(res => {
-      if (res.status !== 200 && res.status !== 201) {
-        throw new Error("Failed!");
+      .then(res => {
+        if (res.status !== 200 && res.status !== 201) {
+          throw new Error("Failed!");
+        }
+        return res.json();
+      })
+      .then(resBody => {
+        this.fetchEvent()
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  };
+
+  fetchEvent = () => {
+    const requestBody = {
+      query: `query {
+        events {
+          _id
+          judul
+          deskripsi
+          harga
+          date
+          creator {
+            _id
+            nama
+          }
+        } 
+      }`
+    };
+
+    fetch("http://localhost:5000/graphql", {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+      headers: {
+        "Content-Type": "application/json"
       }
-      return res.json();
     })
-    .then(resBody => {
-      console.log(resBody)
-    })
-    .catch(err => {
-      console.log(err);
-    });
+      .then(res => {
+        if (res.status !== 200 && res.status !== 201) {
+          throw new Error("Failed!");
+        }
+        return res.json();
+      })
+      .then(resBody => {
+        const events = resBody.data.events;
+        this.setState({ events: events });
+      })
+      .catch(err => {
+        console.log(err);
+      });
   };
 
   render() {
+    const eventList = this.state.events.map(listed => {
+      return (<li key={listed._id} className="event-list-item">{listed.judul}</li>)
+    })
+
     return (
       <React.Fragment>
         {this.state.creating && <Backdrop />}
@@ -135,12 +183,17 @@ class EventsPage extends Component {
             </form>
           </Modal>
         )}
-        <div className="events-control">
-          <p>Buat event milikmu sekarang juga</p>
-          <button className="btn" onClick={this.createEvent}>
-            Create Event
-          </button>
-        </div>
+        {this.context.token && (
+          <div className="events-control">
+            <p>Buat event milikmu sekarang juga</p>
+            <button className="btn" onClick={this.createEvent}>
+              Create Event
+            </button>
+          </div>
+        )}
+        <ul className="event-list">
+          {eventList}
+        </ul>
       </React.Fragment>
     );
   }
